@@ -1,7 +1,7 @@
 let db;
 
 window.onload = () => {
-    var request = indexedDB.open('userData', 1);
+    var request = indexedDB.open('clientData', 1);
 
     request.onupgradeneeded = function (e) {
 
@@ -10,8 +10,8 @@ window.onload = () => {
         if (!db.objectStoreNames.contains('user')) {
 
             var objectStore = db.createObjectStore('user', { keyPath: 'id' });
-            objectStore.createIndex('id', 'id', { unique: true });
-            objectStore.createIndex('email', 'email', { unique: true });
+            objectStore.createIndex('id', 'id', { unique: false });
+            objectStore.createIndex('email', 'email', { unique: false });
             objectStore.createIndex('zipcode', 'zipcode', { unique: false });
             objectStore.createIndex('nip', 'nip', { unique: false });
             objectStore.createIndex('dowod', 'dowod', { unique: false });
@@ -22,31 +22,13 @@ window.onload = () => {
             objectStore.createIndex('ip6', 'ip6', { unique: false });
             objectStore.createIndex('catalog', 'catalog', { unique: false });
             objectStore.createIndex('phone', 'phone', { unique: false });
-
-
-            // Transaction completed
-
-            objectStore.transaction.oncompleted = (e) => {
-                console.log('Object store "student" created');
-                const transaction = db.transaction(['user'], 'readwrite');
-                const objectStore = transaction.objectStore('user');
-                // Add new user
-                const request = objectStore.add(getUserData());
-
-                request.onsuccess = () => {
-                    console.log('New user added!');
-                }
-
-                request.onerror = (err) => {
-                    console.error('Error in adding new user!');
-                }
-            }
         }
     }
 
     request.onsuccess = function (e) {
         console.log('Database opened!');
         db = e.target.result;
+        loadData();
     }
 
     request.onerror = function (e) {
@@ -59,22 +41,10 @@ function remove(elem) {
 }
 
 function loadData() {
-
-    const request = db.transaction('user').objectStore('user').get(0);
+    const request = db.transaction('user').objectStore('user').getAll();
 
     request.onsuccess = () => {
-        const user = request.result;
-        document.getElementById('email').value = user.email;
-        document.getElementById('zipcode').value = user.zipcode;
-        document.getElementById('nip').value = user.nip;
-        document.getElementById('dowod').value = user.dowod;
-        document.getElementById('www').value = user.www;
-        document.getElementById('diskA').value = user.diskA;
-        document.getElementById('diskB').value = user.diskB;
-        document.getElementById('ip6').value = user.ip6;
-        document.getElementById('ip4').value = user.ip4;
-        document.getElementById('catalog').value = user.catalog;
-        document.getElementById('phone').value = user.phone;
+        document.getElementById('klienci').innerHTML = JSON.stringify(request.result);
     }
 
     request.onerror = (err) => {
@@ -83,16 +53,13 @@ function loadData() {
 }
 
 function saveData() {
-    var newUser = getUserData();
+    var newUser = getclientData();
     const transaction = db.transaction(['user'], 'readwrite');
     const objectStore = transaction.objectStore('user');
-    const request = objectStore.get(0);
-    request.onsuccess = () => {
-        const updateRequest = objectStore.put(newUser);
-        updateRequest.onsuccess = () => {
-            console.log('Added new student');
-        }
-    }
+    const request = objectStore.put(newUser);
+    request.onsuccess = event => {
+        loadData();
+    };
 }
 
 function exampleText() {
@@ -118,7 +85,6 @@ function exampleText() {
     catalog.value = "/etc/passwd";
     ip6.value = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
     phone.value = "492 492 492";
-
 }
 
 function clearText() {
@@ -145,9 +111,16 @@ function clearText() {
     ip6.value = "";
     phone.value = "";
 
+    var request = db.transaction(["user"], "readwrite")
+        .objectStore("user")
+        .clear();
+
+    request.onsuccess = event => {
+        loadData();
+    };
 }
 
-function getUserData() {
+function getclientData() {
 
     var email = document.getElementById('email').value;
     var zipcode = document.getElementById('zipcode').value;
@@ -162,7 +135,7 @@ function getUserData() {
     var phone = document.getElementById('phone').value;
 
     return {
-        id: 0,
+        id: new Date().getTime(),
         email: email,
         zipcode: zipcode,
         ip4: ip4,
